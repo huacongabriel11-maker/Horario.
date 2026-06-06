@@ -446,32 +446,109 @@
             localStorage.setItem('studyhub_tasks', JSON.stringify(state.tasks)); renderTasks(); runStudyAI();
         };
 
-        function renderTasks() {
-            const list = document.getElementById('tasksListContainer'), dash = document.getElementById('dashTasksContainer');
-            const pending = state.tasks.filter(t => !t.completed);
-            document.getElementById('navTaskCount').textContent = pending.length;
-            document.getElementById('dashPendingTasks').textContent = `${pending.length} Pendientes`;
-
-            list.innerHTML = ''; dash.innerHTML = '';
+                function renderTasks() {
+            const listContainer = document.getElementById('tasksListContainer');
+            const dashContainer = document.getElementById('dashTasksContainer');
+            const navCount = document.getElementById('navTaskCount');
+            const dashPendingTasks = document.getElementById('dashPendingTasks');
+            const pendingTasks = state.tasks.filter(t => !t.completed);
             
+            if (navCount) navCount.textContent = pendingTasks.length;
+            if (dashPendingTasks) dashPendingTasks.textContent = `${pendingTasks.length} Pendientes`;
+
+            listContainer.innerHTML = '';
+            dashContainer.innerHTML = '';
+
             if (state.tasks.length === 0) {
-                list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">No has agregado deberes aún.</p>';
+                const empty = document.createElement('p');
+                empty.style.color = "var(--text-muted)";
+                empty.style.textAlign = "center";
+                empty.style.padding = "20px";
+                empty.textContent = "No has agregado deberes aún.";
+                listContainer.appendChild(empty);
             } else {
                 state.tasks.forEach(task => {
                     const dateParts = task.deadline.split('-');
-                    list.innerHTML += `
-                        <div class="schedule-mini-item" style="justify-content: space-between; border-left-color: ${task.completed ? 'var(--success)' : 'var(--primary)'};">
-                            <div style="display: flex; gap: 12px; align-items: center; overflow: hidden;">
-                                <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})" style="width:18px; height:18px; accent-color:var(--success); cursor:pointer;">
-                                <div style="display: flex; flex-direction: column;">
-                                    <span style="text-decoration: ${task.completed ? 'line-through' : 'none'}; color: ${task.completed ? 'var(--text-muted)' : 'var(--text-main)'}; font-size: 0.95rem;">${task.text}</span>
-                                    <span style="font-size: 0.75rem; color: var(--text-muted);">📅 Entrega: ${dateParts[2]}/${dateParts[1]}</span>
-                                </div>
-                            </div>
-                            <button onclick="deleteTask(${task.id})" style="background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;">🗑️</button>
-                        </div>`;
+                    
+                    const mainDiv = document.createElement('div');
+                    mainDiv.className = 'schedule-mini-item';
+                    mainDiv.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 12px; margin-bottom: 8px;";
+                    mainDiv.style.borderLeft = `4px solid ${task.completed ? 'var(--success)' : 'var(--primary)'}`;
+
+                    const wrapper = document.createElement('div');
+                    wrapper.style.cssText = "display: flex; gap: 12px; align-items: center; flex-grow: 1; overflow: hidden;";
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = task.completed;
+                    checkbox.style.cssText = "width: 18px; height: 18px; cursor: pointer; accent-color: var(--success);";
+                    checkbox.onchange = () => toggleTask(task.id);
+
+                    const textWrapper = document.createElement('div');
+                    textWrapper.style.display = 'flex';
+                    textWrapper.style.flexDirection = 'column';
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.style.textDecoration = task.completed ? 'line-through' : 'none';
+                    titleSpan.style.color = task.completed ? 'var(--text-muted)' : 'white';
+                    titleSpan.style.fontSize = '0.95rem';
+                    // USO DE TEXTCONTENT PARA PREVENIR XSS
+                    titleSpan.textContent = task.text; 
+
+                    const dateSpan = document.createElement('span');
+                    dateSpan.style.fontSize = '0.75rem';
+                    dateSpan.style.color = 'var(--text-muted)';
+                    dateSpan.style.marginTop = '2px';
+                    dateSpan.textContent = `📅 Entrega: ${dateParts[2]}/${dateParts[1]}`;
+
+                    textWrapper.appendChild(titleSpan);
+                    textWrapper.appendChild(dateSpan);
+                    wrapper.appendChild(checkbox);
+                    wrapper.appendChild(textWrapper);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.style.cssText = "background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; padding: 5px;";
+                    deleteBtn.textContent = '🗑️';
+                    deleteBtn.onclick = () => deleteTask(task.id);
+
+                    mainDiv.appendChild(wrapper);
+                    mainDiv.appendChild(deleteBtn);
+                    listContainer.appendChild(mainDiv);
                 });
             }
+
+            if (pendingTasks.length === 0) {
+                const emptyDash = document.createElement('p');
+                emptyDash.style.cssText = "color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 10px;";
+                emptyDash.textContent = "🎉 Todo al día.";
+                dashContainer.appendChild(emptyDash);
+            } else {
+                pendingTasks.slice(0, 3).forEach(task => {
+                    const label = document.createElement('label');
+                    label.style.cssText = "display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.01); padding: 8px 12px; border-radius: 8px; width: 100%;";
+
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.style.accentColor = 'var(--primary)';
+                    input.onchange = () => toggleTask(task.id);
+
+                    const span = document.createElement('span');
+                    span.style.cssText = "font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); flex-grow: 1;";
+                    // USO DE TEXTCONTENT PARA PREVENIR XSS
+                    span.textContent = task.text; 
+
+                    const badge = document.createElement('span');
+                    badge.style.cssText = "font-size: 0.7rem; color: var(--secondary); background: rgba(168, 85, 247, 0.1); padding: 2px 6px; border-radius: 4px;";
+                    badge.textContent = `${task.deadline.split('-')[2]}/${task.deadline.split('-')[1]}`;
+
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    label.appendChild(badge);
+                    dashContainer.appendChild(label);
+                });
+            }
+                }
+        
 
             if (pending.length === 0) {
                 dash.innerHTML = '<p style="color: var(--text-muted); text-align: center; font-size: 0.85rem;">🎉 Todo al día.</p>';
